@@ -132,6 +132,7 @@ private[zeromq] class ConcurrentSocketActor(params: SocketParameters, dispatcher
       }
       self ! 'poll
     }
+    case 'clearPoll => currentPoll = None
   }
 
   override def preStart {
@@ -168,7 +169,8 @@ private[zeromq] class ConcurrentSocketActor(params: SocketParameters, dispatcher
     }, params.pollTimeoutDuration.toMillis * 2)(dispatcher) onResult {
       case Results => if (self.isRunning) self ! 'receiveFrames
       case NoResults => if (self.isRunning) self ! 'poll
-      case _ => currentPoll = None
+      case Closing => self ! 'clearPoll
+      case _ =>
     } onException {
       case ex ⇒ {
         EventHandler.error(ex, this, "There was an error receiving messages on the zeromq socket")
